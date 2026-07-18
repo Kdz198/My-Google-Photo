@@ -1,0 +1,49 @@
+name: Auto Release Document
+
+on:
+  push:
+    branches: ["master"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release-document:
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Dependencies
+        run: pip install google-generativeai
+
+      - name: Generate Release Note
+        run: python generate_release_note.py
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "HoangTuGio"
+          git config user.email "khangdeptrai198@gmail.com"
+
+      - name: Commit Release Note
+        run: |
+          git add docs/releases/
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "docs: auto generate release note [skip ci]"
+          git push origin HEAD:master

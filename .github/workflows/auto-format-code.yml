@@ -1,0 +1,71 @@
+name: Auto Format Code
+
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+
+jobs:
+  format:
+    if: github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: temurin
+          cache: maven
+
+      - name: Apply Spotless formatting
+        run: |
+          chmod +x mvnw
+          ./mvnw -q -DskipTests spotless:apply
+
+      - name: Configure Git
+        run: |
+          git config user.name "HoangTuGio"
+          git config user.email "khangdeptrai198@gmail.com"
+
+      - name: Commit and push changes
+        run: |
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No formatting changes"
+            exit 0
+          fi
+          git commit -m "style: auto format code with spotless [skip ci]"
+          git push origin HEAD:master
+
+  check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: temurin
+          cache: maven
+
+      - name: Check Spotless formatting
+        run: |
+          chmod +x mvnw
+          ./mvnw -q -DskipTests spotless:check
