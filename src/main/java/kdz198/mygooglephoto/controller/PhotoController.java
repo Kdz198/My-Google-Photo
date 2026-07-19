@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import java.util.List;
 import java.util.UUID;
 import kdz198.mygooglephoto.model.Media;
+import kdz198.mygooglephoto.service.MediaPreview;
 import kdz198.mygooglephoto.service.PhotoStorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ByteArrayResource;
@@ -86,7 +87,7 @@ public class PhotoController {
               + "Có thể chia sẻ link này cho người khác xem trực tiếp.")
   @GetMapping("/preview/{shareToken}")
   public ResponseEntity<Resource> previewByShareToken(@PathVariable UUID shareToken) {
-    var preview = photoStorageService.getPreview(shareToken);
+    MediaPreview preview = photoStorageService.getPreview(shareToken);
     return ResponseEntity.ok()
         .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + preview.filename() + "\"")
         .contentType(MediaType.parseMediaType(preview.contentType()))
