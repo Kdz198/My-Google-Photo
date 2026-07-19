@@ -25,6 +25,5 @@ public class Album {
   @Column(name = "description", columnDefinition = "TEXT")
   private String description;
 
-  @CreationTimestamp
-  private LocalDateTime createdAt;
+  @CreationTimestamp private LocalDateTime createdAt;
 }

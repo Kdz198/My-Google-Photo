@@ -32,8 +32,7 @@ public class Media {
 
   private LocalDateTime creationTime;
 
-  @CreationTimestamp
-  private LocalDateTime uploadTime;
+  @CreationTimestamp private LocalDateTime uploadTime;
 
   @JdbcTypeCode(SqlTypes.JSON)
   @Column(columnDefinition = "jsonb")
