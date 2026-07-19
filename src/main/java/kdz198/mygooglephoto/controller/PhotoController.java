@@ -1,5 +1,9 @@
 package kdz198.mygooglephoto.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -29,8 +33,19 @@ public class PhotoController {
   // ---------------------------------------------------------------------------
   // POST /api/photos/upload — upload nhiều file
   // ---------------------------------------------------------------------------
+  @Operation(summary = "Upload nhiều file ảnh/video")
+  @RequestBody(
+      content =
+          @Content(
+              mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+              schema = @Schema(type = "object"),
+              encoding = {
+                @io.swagger.v3.oas.annotations.media.Encoding(
+                    name = "files",
+                    contentType = "image/*, video/*")
+              }))
   @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-  public ResponseEntity<?> uploadMultiple(@RequestParam("files") MultipartFile[] files) {
+  public ResponseEntity<?> uploadMultiple(@RequestPart("files") MultipartFile[] files) {
     try {
       List<Media> savedMedia = photoStorageService.storeFiles(files);
       return ResponseEntity.ok(savedMedia);
@@ -42,6 +57,7 @@ public class PhotoController {
   // ---------------------------------------------------------------------------
   // GET /api/photos?page=0&size=20 — danh sách dạng slice (cursor-based)
   // ---------------------------------------------------------------------------
+  @Operation(summary = "Lấy danh sách media dạng slice, sort theo uploadTime giảm dần")
   @GetMapping
   public ResponseEntity<Slice<Media>> listFiles(
       @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
@@ -52,6 +68,7 @@ public class PhotoController {
   // ---------------------------------------------------------------------------
   // GET /api/photos/{id} — chi tiết + metadata của 1 file
   // ---------------------------------------------------------------------------
+  @Operation(summary = "Xem chi tiết + EXIF metadata của 1 file")
   @GetMapping("/{id}")
   public ResponseEntity<?> getDetail(@PathVariable Long id) {
     try {
@@ -64,6 +81,7 @@ public class PhotoController {
   // ---------------------------------------------------------------------------
   // DELETE /api/photos/{id} — xóa file khỏi disk và DB
   // ---------------------------------------------------------------------------
+  @Operation(summary = "Xóa file khỏi disk và database")
   @DeleteMapping("/{id}")
   public ResponseEntity<?> deleteFile(@PathVariable Long id) {
     try {
@@ -80,6 +98,11 @@ public class PhotoController {
   // GET /api/photos/preview/{shareToken} — shortlink preview / chia sẻ
   // Stream nội dung file về trình duyệt với đúng content-type
   // ---------------------------------------------------------------------------
+  @Operation(
+      summary = "Preview file qua shortlink",
+      description =
+          "Dùng shareToken (UUID) để stream file về trình duyệt. "
+              + "Có thể chia sẻ link này cho người khác xem trực tiếp.")
   @GetMapping("/preview/{shareToken}")
   public ResponseEntity<Resource> previewByShareToken(@PathVariable UUID shareToken) {
     try {
