@@ -3,6 +3,7 @@ package kdz198.mygooglephoto.model;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * Join entity representing the many‑to‑many relationship between {@link Album} and {@link Media}.
