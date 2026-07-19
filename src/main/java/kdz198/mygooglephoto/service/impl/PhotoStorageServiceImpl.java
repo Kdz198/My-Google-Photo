@@ -15,6 +15,7 @@ import kdz198.mygooglephoto.model.MediaMetadata;
 import kdz198.mygooglephoto.repository.MediaRepository;
 import kdz198.mygooglephoto.service.MediaPreview;
 import kdz198.mygooglephoto.service.PhotoStorageService;
+import kdz198.mygooglephoto.service.ThumbnailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
@@ -31,6 +32,7 @@ public class PhotoStorageServiceImpl implements PhotoStorageService {
 
   private final MediaRepository mediaRepository;
   private final MediaMetadataExtractor metadataExtractor;
+  private final ThumbnailService thumbnailService;
 
   @Override
   public List<Media> storeFiles(MultipartFile[] files) {
@@ -62,10 +64,14 @@ public class PhotoStorageServiceImpl implements PhotoStorageService {
 
       MediaMetadata metadata = metadataExtractor.extract(file);
 
+      // Generate thumbnail (null nếu là video hoặc lỗi)
+      Path thumbPath = thumbnailService.generate(destination, mediaType);
+
       Media media =
           Media.builder()
               .originalFilename(originalFilename)
               .storagePath(destination.toString())
+              .thumbnailPath(thumbPath != null ? thumbPath.toString() : null)
               .mediaType(mediaType)
               .sizeBytes(file.getSize())
               .isFavorite(false)
@@ -73,7 +79,7 @@ public class PhotoStorageServiceImpl implements PhotoStorageService {
               .build();
 
       savedMediaList.add(mediaRepository.save(media));
-      log.info("Stored file '{}' -> {}", originalFilename, destination);
+      log.info("Stored file '{}' -> {}, thumbnail -> {}", originalFilename, destination, thumbPath);
     }
 
     return savedMediaList;
