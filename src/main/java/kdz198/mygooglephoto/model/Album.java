@@ -2,7 +2,6 @@ package kdz198.mygooglephoto.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
-import java.util.UUID;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -17,7 +16,7 @@ public class Album {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private UUID id;
+  private Long id;
 
   @Column(name = "name", length = 255, nullable = false)
   private String name;
