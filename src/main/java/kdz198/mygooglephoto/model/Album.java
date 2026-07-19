@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
 /** Entity representing a manual album (folder) created by the user. */
 @Entity
@@ -15,8 +16,7 @@ import lombok.*;
 public class Album {
 
   @Id
-  @GeneratedValue(strategy = GenerationType.AUTO)
-  @Column(name = "id", columnDefinition = "UUID", updatable = false, nullable = false)
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
   private UUID id;
 
   @Column(name = "name", length = 255, nullable = false)
@@ -25,6 +25,6 @@ public class Album {
   @Column(name = "description", columnDefinition = "TEXT")
   private String description;
 
-  @Column(name = "created_at", nullable = false)
-  private LocalDateTime createdAt = LocalDateTime.now();
+  @CreationTimestamp
+  private LocalDateTime createdAt;
 }

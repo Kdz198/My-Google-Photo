@@ -1,40 +1,30 @@
 package kdz198.mygooglephoto.model;
 
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
-import java.util.UUID;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
-/**
- * Join entity representing the many‑to‑many relationship between {@link Album} and {@link Media}.
- * Simplified version using a generated surrogate primary key.
- */
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "album_medias")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class AlbumMedia {
 
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-  @Column(name = "album_id", columnDefinition = "UUID", updatable = false, nullable = false)
-  private UUID albumId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "album_id", nullable = false)
+    private Album album;
 
-  @Column(name = "media_id", updatable = false, nullable = false)
-  private Long mediaId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "media_id", nullable = false)
+    private Media media;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "album_id", insertable = false, updatable = false)
-  private Album album;
-
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "media_id", insertable = false, updatable = false)
-  private Media media;
-
-  @Column(name = "added_at", nullable = false)
-  private LocalDateTime addedAt = LocalDateTime.now();
+    @CreationTimestamp
+    private LocalDateTime addedAt;
 }
