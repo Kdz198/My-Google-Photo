@@ -6,13 +6,17 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import kdz198.mygooglephoto.helper.MediaMetadataExtractor;
 import kdz198.mygooglephoto.model.Media;
+import kdz198.mygooglephoto.model.MediaMetadata;
 import kdz198.mygooglephoto.repository.MediaRepository;
 import kdz198.mygooglephoto.service.PhotoStorageService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PhotoStorageServiceImpl implements PhotoStorageService {
@@ -20,6 +24,7 @@ public class PhotoStorageServiceImpl implements PhotoStorageService {
   private static final Path STORAGE_DIR = Paths.get("/data/photo_homelab");
 
   private final MediaRepository mediaRepository;
+  private final MediaMetadataExtractor metadataExtractor;
 
   @Override
   public List<Media> storeFiles(MultipartFile[] files) throws IOException {
@@ -44,6 +49,9 @@ public class PhotoStorageServiceImpl implements PhotoStorageService {
       String mediaType =
           (contentType != null && contentType.startsWith("video")) ? "VIDEO" : "IMAGE";
 
+      // Extract EXIF / metadata from the uploaded file
+      MediaMetadata metadata = metadataExtractor.extract(file);
+
       // Build and save Media entity
       Media media =
           Media.builder()
@@ -52,9 +60,11 @@ public class PhotoStorageServiceImpl implements PhotoStorageService {
               .mediaType(mediaType)
               .sizeBytes(file.getSize())
               .isFavorite(false)
+              .metadata(metadata)
               .build();
 
       savedMediaList.add(mediaRepository.save(media));
+      log.info("Stored file '{}' -> {}", originalFilename, destination);
     }
 
     return savedMediaList;
