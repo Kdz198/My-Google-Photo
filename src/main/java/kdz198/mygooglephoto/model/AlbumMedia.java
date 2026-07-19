@@ -1,0 +1,38 @@
+package kdz198.mygooglephoto.model;
+
+import jakarta.persistence.*;
+import lombok.*;
+import java.time.LocalDateTime;
+
+/**
+ * Join entity representing the many‑to‑many relationship between {@link Album} and {@link Media}.
+ * Uses a composite primary key defined in {@link AlbumMediaId}.
+ */
+@Entity
+@Table(name = "album_medias")
+@IdClass(AlbumMediaId.class)
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class AlbumMedia {
+
+    @Id
+    @Column(name = "album_id", columnDefinition = "UUID", updatable = false, nullable = false)
+    private UUID albumId;
+
+    @Id
+    @Column(name = "media_id", updatable = false, nullable = false)
+    private Long mediaId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "album_id", insertable = false, updatable = false)
+    private Album album;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "media_id", insertable = false, updatable = false)
+    private Media media;
+
+    @Column(name = "added_at", nullable = false)
+    private LocalDateTime addedAt = LocalDateTime.now();
+}
