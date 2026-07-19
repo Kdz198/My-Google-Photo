@@ -7,10 +7,6 @@ import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
-/**
- * Entity representing a media file (image or video) stored in the system.
- * Uses Lombok for boilerplate reduction and an embedded metadata class.
- */
 @Entity
 @Table(name = "medias")
 @Data
@@ -44,7 +40,6 @@ public class Media {
 
     @Column(name = "upload_time", nullable = false)
     private LocalDateTime uploadTime = LocalDateTime.now();
-
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
