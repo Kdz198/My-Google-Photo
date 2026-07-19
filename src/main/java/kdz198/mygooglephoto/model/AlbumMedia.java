@@ -11,18 +11,19 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "album_medias")
-@IdClass(AlbumMediaId.class)
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 public class AlbumMedia {
 
-    @Id
     @Column(name = "album_id", columnDefinition = "UUID", updatable = false, nullable = false)
     private UUID albumId;
 
-    @Id
     @Column(name = "media_id", updatable = false, nullable = false)
     private Long mediaId;
 
