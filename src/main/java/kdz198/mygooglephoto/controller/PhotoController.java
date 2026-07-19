@@ -4,9 +4,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.UUID;
 import kdz198.mygooglephoto.model.Media;
@@ -88,27 +85,12 @@ public class PhotoController {
           "Dùng shareToken (UUID) để stream file về trình duyệt. "
               + "Có thể chia sẻ link này cho người khác xem trực tiếp.")
   @GetMapping("/preview/{shareToken}")
-  public ResponseEntity<Resource> previewByShareToken(@PathVariable UUID shareToken)
-      throws IOException {
-    Media media = photoStorageService.getByShareToken(shareToken);
-    java.nio.file.Path filePath = Paths.get(media.getStoragePath());
-
-    if (!Files.exists(filePath)) {
-      return ResponseEntity.notFound().build();
-    }
-
-    byte[] data = Files.readAllBytes(filePath);
-    String contentType =
-        media.getMetadata() != null && media.getMetadata().getMime_type() != null
-            ? media.getMetadata().getMime_type()
-            : MediaType.APPLICATION_OCTET_STREAM_VALUE;
-
+  public ResponseEntity<Resource> previewByShareToken(@PathVariable UUID shareToken) {
+    var preview = photoStorageService.getPreview(shareToken);
     return ResponseEntity.ok()
-        .header(
-            HttpHeaders.CONTENT_DISPOSITION,
-            "inline; filename=\"" + media.getOriginalFilename() + "\"")
-        .contentType(MediaType.parseMediaType(contentType))
-        .contentLength(data.length)
-        .body(new ByteArrayResource(data));
+        .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + preview.filename() + "\"")
+        .contentType(MediaType.parseMediaType(preview.contentType()))
+        .contentLength(preview.data().length)
+        .body(new ByteArrayResource(preview.data()));
   }
 }

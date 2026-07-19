@@ -13,6 +13,7 @@ import kdz198.mygooglephoto.helper.MediaMetadataExtractor;
 import kdz198.mygooglephoto.model.Media;
 import kdz198.mygooglephoto.model.MediaMetadata;
 import kdz198.mygooglephoto.repository.MediaRepository;
+import kdz198.mygooglephoto.service.MediaPreview;
 import kdz198.mygooglephoto.service.PhotoStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -114,5 +115,26 @@ public class PhotoStorageServiceImpl implements PhotoStorageService {
         .findByShareToken(shareToken)
         .orElseThrow(
             () -> new MediaNotFoundException("Media not found for share token: " + shareToken));
+  }
+
+  @Override
+  public MediaPreview getPreview(UUID shareToken) {
+    Media media = getByShareToken(shareToken);
+    Path filePath = Paths.get(media.getStoragePath());
+
+    if (!Files.exists(filePath)) {
+      throw new MediaNotFoundException("File not found on disk for share token: " + shareToken);
+    }
+
+    try {
+      byte[] data = Files.readAllBytes(filePath);
+      String contentType =
+          media.getMetadata() != null && media.getMetadata().getMime_type() != null
+              ? media.getMetadata().getMime_type()
+              : "application/octet-stream";
+      return new MediaPreview(data, contentType, media.getOriginalFilename());
+    } catch (IOException e) {
+      throw new FileStorageException("Failed to read file for preview: " + filePath, e);
+    }
   }
 }

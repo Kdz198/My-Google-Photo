@@ -48,4 +48,13 @@ public interface PhotoStorageService {
    * @return the {@link Media} entity
    */
   Media getByShareToken(UUID shareToken);
+
+  /**
+   * Reads the file bytes and resolves content-type for the given share token. Encapsulates all disk
+   * I/O so the controller stays thin.
+   *
+   * @param shareToken the share UUID token
+   * @return {@link MediaPreview} containing raw bytes, content-type and filename
+   */
+  MediaPreview getPreview(UUID shareToken);
 }
