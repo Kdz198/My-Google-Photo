@@ -7,6 +7,8 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import kdz198.mygooglephoto.exception.FileStorageException;
+import kdz198.mygooglephoto.exception.MediaNotFoundException;
 import kdz198.mygooglephoto.helper.MediaMetadataExtractor;
 import kdz198.mygooglephoto.model.Media;
 import kdz198.mygooglephoto.model.MediaMetadata;
@@ -30,8 +32,12 @@ public class PhotoStorageServiceImpl implements PhotoStorageService {
   private final MediaMetadataExtractor metadataExtractor;
 
   @Override
-  public List<Media> storeFiles(MultipartFile[] files) throws IOException {
-    Files.createDirectories(STORAGE_DIR);
+  public List<Media> storeFiles(MultipartFile[] files) {
+    try {
+      Files.createDirectories(STORAGE_DIR);
+    } catch (IOException e) {
+      throw new FileStorageException("Cannot create storage directory: " + STORAGE_DIR, e);
+    }
 
     List<Media> savedMediaList = new ArrayList<>();
 
@@ -43,7 +49,11 @@ public class PhotoStorageServiceImpl implements PhotoStorageService {
       String originalFilename = file.getOriginalFilename();
       Path destination = STORAGE_DIR.resolve(originalFilename);
 
-      file.transferTo(destination);
+      try {
+        file.transferTo(destination);
+      } catch (IOException e) {
+        throw new FileStorageException("Failed to store file: " + originalFilename, e);
+      }
 
       String contentType = file.getContentType();
       String mediaType =
@@ -75,26 +85,25 @@ public class PhotoStorageServiceImpl implements PhotoStorageService {
 
   @Override
   public Media getDetail(Long id) {
-    return mediaRepository
-        .findById(id)
-        .orElseThrow(
-            () -> new jakarta.persistence.EntityNotFoundException("Media not found: " + id));
+    return mediaRepository.findById(id).orElseThrow(() -> new MediaNotFoundException(id));
   }
 
   @Override
-  public void deleteFile(Long id) throws IOException {
+  public void deleteFile(Long id) {
     Media media = getDetail(id);
 
-    // Delete from disk
     Path filePath = Paths.get(media.getStoragePath());
     if (Files.exists(filePath)) {
-      Files.delete(filePath);
-      log.info("Deleted file from disk: {}", filePath);
+      try {
+        Files.delete(filePath);
+        log.info("Deleted file from disk: {}", filePath);
+      } catch (IOException e) {
+        throw new FileStorageException("Failed to delete file from disk: " + filePath, e);
+      }
     } else {
       log.warn("File not found on disk, removing DB record only: {}", filePath);
     }
 
-    // Delete from DB
     mediaRepository.delete(media);
     log.info("Deleted media record id={}", id);
   }
@@ -104,8 +113,6 @@ public class PhotoStorageServiceImpl implements PhotoStorageService {
     return mediaRepository
         .findByShareToken(shareToken)
         .orElseThrow(
-            () ->
-                new jakarta.persistence.EntityNotFoundException(
-                    "Media not found for share token: " + shareToken));
+            () -> new MediaNotFoundException("Media not found for share token: " + shareToken));
   }
 }

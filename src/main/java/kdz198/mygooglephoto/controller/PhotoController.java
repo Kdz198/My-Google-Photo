@@ -45,17 +45,12 @@ public class PhotoController {
                     contentType = "image/*, video/*")
               }))
   @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-  public ResponseEntity<?> uploadMultiple(@RequestPart("files") MultipartFile[] files) {
-    try {
-      List<Media> savedMedia = photoStorageService.storeFiles(files);
-      return ResponseEntity.ok(savedMedia);
-    } catch (IOException e) {
-      return ResponseEntity.status(500).body("Failed to store files: " + e.getMessage());
-    }
+  public ResponseEntity<List<Media>> uploadMultiple(@RequestPart("files") MultipartFile[] files) {
+    return ResponseEntity.ok(photoStorageService.storeFiles(files));
   }
 
   // ---------------------------------------------------------------------------
-  // GET /api/photos?page=0&size=20 — danh sách dạng slice (cursor-based)
+  // GET /api/photos?page=0&size=20 — danh sách dạng slice
   // ---------------------------------------------------------------------------
   @Operation(summary = "Lấy danh sách media dạng slice, sort theo uploadTime giảm dần")
   @GetMapping
@@ -70,12 +65,8 @@ public class PhotoController {
   // ---------------------------------------------------------------------------
   @Operation(summary = "Xem chi tiết + EXIF metadata của 1 file")
   @GetMapping("/{id}")
-  public ResponseEntity<?> getDetail(@PathVariable Long id) {
-    try {
-      return ResponseEntity.ok(photoStorageService.getDetail(id));
-    } catch (jakarta.persistence.EntityNotFoundException e) {
-      return ResponseEntity.status(404).body(e.getMessage());
-    }
+  public ResponseEntity<Media> getDetail(@PathVariable Long id) {
+    return ResponseEntity.ok(photoStorageService.getDetail(id));
   }
 
   // ---------------------------------------------------------------------------
@@ -83,20 +74,13 @@ public class PhotoController {
   // ---------------------------------------------------------------------------
   @Operation(summary = "Xóa file khỏi disk và database")
   @DeleteMapping("/{id}")
-  public ResponseEntity<?> deleteFile(@PathVariable Long id) {
-    try {
-      photoStorageService.deleteFile(id);
-      return ResponseEntity.noContent().build();
-    } catch (jakarta.persistence.EntityNotFoundException e) {
-      return ResponseEntity.status(404).body(e.getMessage());
-    } catch (IOException e) {
-      return ResponseEntity.status(500).body("Failed to delete file: " + e.getMessage());
-    }
+  public ResponseEntity<Void> deleteFile(@PathVariable Long id) {
+    photoStorageService.deleteFile(id);
+    return ResponseEntity.noContent().build();
   }
 
   // ---------------------------------------------------------------------------
   // GET /api/photos/preview/{shareToken} — shortlink preview / chia sẻ
-  // Stream nội dung file về trình duyệt với đúng content-type
   // ---------------------------------------------------------------------------
   @Operation(
       summary = "Preview file qua shortlink",
@@ -104,36 +88,27 @@ public class PhotoController {
           "Dùng shareToken (UUID) để stream file về trình duyệt. "
               + "Có thể chia sẻ link này cho người khác xem trực tiếp.")
   @GetMapping("/preview/{shareToken}")
-  public ResponseEntity<Resource> previewByShareToken(@PathVariable UUID shareToken) {
-    try {
-      Media media = photoStorageService.getByShareToken(shareToken);
-      java.nio.file.Path filePath = Paths.get(media.getStoragePath());
+  public ResponseEntity<Resource> previewByShareToken(@PathVariable UUID shareToken)
+      throws IOException {
+    Media media = photoStorageService.getByShareToken(shareToken);
+    java.nio.file.Path filePath = Paths.get(media.getStoragePath());
 
-      if (!Files.exists(filePath)) {
-        return ResponseEntity.status(404).build();
-      }
-
-      byte[] data = Files.readAllBytes(filePath);
-      ByteArrayResource resource = new ByteArrayResource(data);
-
-      // Detect content-type: ưu tiên từ metadata, fallback theo extension
-      String contentType =
-          media.getMetadata() != null && media.getMetadata().getMime_type() != null
-              ? media.getMetadata().getMime_type()
-              : MediaType.APPLICATION_OCTET_STREAM_VALUE;
-
-      return ResponseEntity.ok()
-          .header(
-              HttpHeaders.CONTENT_DISPOSITION,
-              "inline; filename=\"" + media.getOriginalFilename() + "\"")
-          .contentType(MediaType.parseMediaType(contentType))
-          .contentLength(data.length)
-          .body(resource);
-
-    } catch (jakarta.persistence.EntityNotFoundException e) {
-      return ResponseEntity.status(404).build();
-    } catch (IOException e) {
-      return ResponseEntity.status(500).build();
+    if (!Files.exists(filePath)) {
+      return ResponseEntity.notFound().build();
     }
+
+    byte[] data = Files.readAllBytes(filePath);
+    String contentType =
+        media.getMetadata() != null && media.getMetadata().getMime_type() != null
+            ? media.getMetadata().getMime_type()
+            : MediaType.APPLICATION_OCTET_STREAM_VALUE;
+
+    return ResponseEntity.ok()
+        .header(
+            HttpHeaders.CONTENT_DISPOSITION,
+            "inline; filename=\"" + media.getOriginalFilename() + "\"")
+        .contentType(MediaType.parseMediaType(contentType))
+        .contentLength(data.length)
+        .body(new ByteArrayResource(data));
   }
 }
