@@ -7,16 +7,16 @@ import java.util.UUID;
 
 /**
  * Join entity representing the many‑to‑many relationship between {@link Album} and {@link Media}.
- * Uses a composite primary key defined in {@link AlbumMediaId}.
+ * Simplified version using a generated surrogate primary key.
  */
 @Entity
 @Table(name = "album_medias")
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class AlbumMedia {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
