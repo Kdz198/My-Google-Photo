@@ -1,9 +1,9 @@
 package kdz198.mygooglephoto.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import java.util.List;
 import java.util.UUID;
 import kdz198.mygooglephoto.model.Media;
@@ -32,18 +32,14 @@ public class PhotoController {
   // POST /api/photos/upload — upload nhiều file
   // ---------------------------------------------------------------------------
   @Operation(summary = "Upload nhiều file ảnh/video")
-  @RequestBody(
-      content =
-          @Content(
-              mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
-              schema = @Schema(type = "object"),
-              encoding = {
-                @io.swagger.v3.oas.annotations.media.Encoding(
-                    name = "files",
-                    contentType = "image/*, video/*")
-              }))
   @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-  public ResponseEntity<List<Media>> uploadMultiple(@RequestPart("files") MultipartFile[] files) {
+  public ResponseEntity<List<Media>> uploadMultiple(
+      @Parameter(
+              description = "Danh sách file cần upload",
+              required = true,
+              array = @ArraySchema(schema = @Schema(type = "string", format = "binary")))
+          @RequestPart("files")
+          MultipartFile[] files) {
     return ResponseEntity.ok(photoStorageService.storeFiles(files));
   }
 
