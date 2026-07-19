@@ -16,10 +16,10 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+public class AlbumMedia {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-public class AlbumMedia {
 
     @Column(name = "album_id", columnDefinition = "UUID", updatable = false, nullable = false)
     private UUID albumId;
