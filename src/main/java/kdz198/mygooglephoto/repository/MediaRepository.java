@@ -7,5 +7,5 @@ import org.springframework.stereotype.Repository;
 /** Spring Data JPA repository for {@link Media} entities. */
 @Repository
 public interface MediaRepository extends JpaRepository<Media, Long> {
-    // Additional query methods can be defined here if needed, e.g., findByIsFavoriteTrue()
+  // Additional query methods can be defined here if needed, e.g., findByIsFavoriteTrue()
 }
