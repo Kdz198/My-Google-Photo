@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import kdz198.mygooglephoto.helper.MediaMetadataExtractor;
 import kdz198.mygooglephoto.model.Media;
 import kdz198.mygooglephoto.model.MediaMetadata;
@@ -13,6 +14,8 @@ import kdz198.mygooglephoto.repository.MediaRepository;
 import kdz198.mygooglephoto.service.PhotoStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -28,7 +31,6 @@ public class PhotoStorageServiceImpl implements PhotoStorageService {
 
   @Override
   public List<Media> storeFiles(MultipartFile[] files) throws IOException {
-    // Ensure storage directory exists
     Files.createDirectories(STORAGE_DIR);
 
     List<Media> savedMediaList = new ArrayList<>();
@@ -41,18 +43,14 @@ public class PhotoStorageServiceImpl implements PhotoStorageService {
       String originalFilename = file.getOriginalFilename();
       Path destination = STORAGE_DIR.resolve(originalFilename);
 
-      // Transfer file to destination (overwrites if exists)
       file.transferTo(destination);
 
-      // Determine media type from content type
       String contentType = file.getContentType();
       String mediaType =
           (contentType != null && contentType.startsWith("video")) ? "VIDEO" : "IMAGE";
 
-      // Extract EXIF / metadata from the uploaded file
       MediaMetadata metadata = metadataExtractor.extract(file);
 
-      // Build and save Media entity
       Media media =
           Media.builder()
               .originalFilename(originalFilename)
@@ -68,5 +66,46 @@ public class PhotoStorageServiceImpl implements PhotoStorageService {
     }
 
     return savedMediaList;
+  }
+
+  @Override
+  public Slice<Media> listFiles(Pageable pageable) {
+    return mediaRepository.findAll(pageable);
+  }
+
+  @Override
+  public Media getDetail(Long id) {
+    return mediaRepository
+        .findById(id)
+        .orElseThrow(
+            () -> new jakarta.persistence.EntityNotFoundException("Media not found: " + id));
+  }
+
+  @Override
+  public void deleteFile(Long id) throws IOException {
+    Media media = getDetail(id);
+
+    // Delete from disk
+    Path filePath = Paths.get(media.getStoragePath());
+    if (Files.exists(filePath)) {
+      Files.delete(filePath);
+      log.info("Deleted file from disk: {}", filePath);
+    } else {
+      log.warn("File not found on disk, removing DB record only: {}", filePath);
+    }
+
+    // Delete from DB
+    mediaRepository.delete(media);
+    log.info("Deleted media record id={}", id);
+  }
+
+  @Override
+  public Media getByShareToken(UUID shareToken) {
+    return mediaRepository
+        .findByShareToken(shareToken)
+        .orElseThrow(
+            () ->
+                new jakarta.persistence.EntityNotFoundException(
+                    "Media not found for share token: " + shareToken));
   }
 }
