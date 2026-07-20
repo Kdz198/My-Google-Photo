@@ -4,9 +4,16 @@ import 'package:openapi/api.dart';
 import 'dart:async';
 import 'package:web/web.dart' as web;
 import 'dart:js_interop';
-import 'dart:js_interop_unsafe';
 import '../widgets/photo_card.dart';
 import '../widgets/photo_detail_dialog.dart';
+
+/// Extension type that exposes the blob overload of FormData.append.
+/// package:web only exposes the string overload; we need the blob overload
+/// so each multipart part gets its own Content-Type header.
+extension type _FormDataBlob(web.FormData _) {
+  @JS('append')
+  external void appendBlob(String name, web.Blob blob, String filename);
+}
 
 class PhotoGalleryScreen extends StatefulWidget {
   const PhotoGalleryScreen({Key? key}) : super(key: key);
@@ -113,15 +120,9 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
             final blobParts = <JSAny>[file.bytes!.buffer.toJS].toJS;
             final blobOptions = web.BlobPropertyBag(type: mime);
             final blob = web.Blob(blobParts, blobOptions);
-            // Use callMethod to explicitly call the blob overload of FormData.append:
-            // formData.append(name, blob, filename) — the 3-arg blob variant.
-            // Calling formData.append() directly from Dart picks the string overload.
-            (formData as JSObject).callMethod(
-              'append'.toJS,
-              'files'.toJS,
-              blob,
-              file.name.toJS,
-            );
+            // Cast to our extension type to call the blob overload of append:
+            // formData.append(name, blob, filename) — ensures Content-Type per part.
+            _FormDataBlob(formData).appendBlob('files', blob, file.name);
           }
         }
 
