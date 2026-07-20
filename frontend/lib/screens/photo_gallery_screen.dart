@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:http/http.dart';
 import 'package:openapi/api.dart';
-import 'package:http/http.dart' as http;
-import 'dart:typed_data';
 import '../widgets/photo_card.dart';
 import '../widgets/photo_detail_dialog.dart';
-
 
 class PhotoGalleryScreen extends StatefulWidget {
   const PhotoGalleryScreen({Key? key}) : super(key: key);
@@ -76,21 +74,6 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
     }
   }
 
-  /// Resolve MIME type from file extension — required so Spring Boot's @RequestPart
-  /// sees a Content-Type per part and doesn't reject the upload.
-  String _mimeType(String filename) {
-    final ext = filename.split('.').last.toLowerCase();
-    const map = {
-      'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
-      'png': 'image/png', 'gif': 'image/gif',
-      'webp': 'image/webp', 'bmp': 'image/bmp',
-      'heic': 'image/heic', 'heif': 'image/heif',
-      'mp4': 'video/mp4', 'mov': 'video/quicktime',
-      'avi': 'video/x-msvideo', 'mkv': 'video/x-matroska',
-    };
-    return map[ext] ?? 'application/octet-stream';
-  }
-
   Future<void> _uploadPhotos() async {
     FilePickerResult? result = await FilePicker.pickFiles(
       allowMultiple: true,
@@ -103,51 +86,21 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
       });
 
       try {
-        // Build multipart/form-data body manually — identical to how curl constructs it.
-        // This bypasses ALL browser FormData / XHR issues in Flutter Web.
-        final boundary = 'dart-boundary-${DateTime.now().millisecondsSinceEpoch}';
-        final bodyBytes = <int>[];
-
+        List<MultipartFile> multipartFiles = [];
         for (var file in result.files) {
           if (file.bytes != null) {
-            final mime = _mimeType(file.name);
-            // Part header
-            bodyBytes.addAll('--$boundary\r\n'.codeUnits);
-            bodyBytes.addAll(
-              'Content-Disposition: form-data; name="files"; filename="${file.name}"\r\n'
-              .codeUnits,
-            );
-            bodyBytes.addAll('Content-Type: $mime\r\n'.codeUnits);
-            bodyBytes.addAll('\r\n'.codeUnits);
-            // File bytes
-            bodyBytes.addAll(file.bytes!);
-            bodyBytes.addAll('\r\n'.codeUnits);
+            multipartFiles.add(MultipartFile.fromBytes(
+              'files',
+              file.bytes!,
+              filename: file.name,
+            ));
           }
         }
-        // Closing boundary
-        bodyBytes.addAll('--$boundary--\r\n'.codeUnits);
-
-        final response = await http.post(
-          Uri.parse('https://api-photo.kdz.asia/api/photos/upload'),
-          headers: {'Content-Type': 'multipart/form-data; boundary=$boundary'},
-          body: Uint8List.fromList(bodyBytes),
-        );
-
-        if (mounted) {
-          if (response.statusCode == 200) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Upload successful!')));
-            _loadPhotos(refresh: true);
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Upload failed: ${response.statusCode} ${response.body}')));
-          }
-        }
+        await _api.uploadMultiple(multipartFiles);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Upload successful!')));
+        _loadPhotos(refresh: true);
       } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Upload failed: $e')));
-        }
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
       } finally {
         setState(() {
           _isUploading = false;
