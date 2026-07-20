@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:http/http.dart';
+import 'package:http/http.dart' as http;
 import 'package:openapi/api.dart';
 import '../widgets/photo_card.dart';
 import '../widgets/photo_detail_dialog.dart';
@@ -86,21 +86,38 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
       });
 
       try {
-        List<MultipartFile> multipartFiles = [];
+        // Bypass the generated API client for upload to avoid Content-Type boundary bug.
+        // Use http.MultipartRequest directly — the http package correctly sets
+        // Content-Type: multipart/form-data; boundary=... without us touching it.
+        final uri = Uri.parse('https://api-photo.kdz.asia/api/photos/upload');
+        final request = http.MultipartRequest('POST', uri);
+
         for (var file in result.files) {
           if (file.bytes != null) {
-            multipartFiles.add(MultipartFile.fromBytes(
+            request.files.add(http.MultipartFile.fromBytes(
               'files',
               file.bytes!,
               filename: file.name,
             ));
           }
         }
-        await _api.uploadMultiple(multipartFiles);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Upload successful!')));
-        _loadPhotos(refresh: true);
+
+        final streamedResponse = await request.send();
+        if (streamedResponse.statusCode == 200) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Upload successful!')));
+            _loadPhotos(refresh: true);
+          }
+        } else {
+          final body = await streamedResponse.stream.bytesToString();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Upload failed: ${streamedResponse.statusCode} $body')));
+          }
+        }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+        }
       } finally {
         setState(() {
           _isUploading = false;
@@ -108,6 +125,7 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
       }
     }
   }
+
 
   Future<void> _deletePhoto(Media media) async {
     bool? confirm = await showDialog<bool>(
