@@ -82,7 +82,13 @@ class ApiClient {
         final request = AbortableMultipartRequest(method, uri, abortTrigger: abortTrigger);
         request.fields.addAll(body.fields);
         request.files.addAll(body.files);
-        request.headers.addAll(headerParams);
+        
+        // Remove Content-Type from headerParams to prevent overriding the generated boundary
+        // http.MultipartRequest uses 'content-type' internally, while headerParams uses 'Content-Type'
+        final cleanHeaderParams = Map<String, String>.from(headerParams)
+          ..removeWhere((k, v) => k.toLowerCase() == 'content-type');
+          
+        request.headers.addAll(cleanHeaderParams);
         request.headers.addAll(body.headers);
         final response = await _client.send(request);
         return Response.fromStream(response);
