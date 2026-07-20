@@ -76,6 +76,21 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
     }
   }
 
+  /// Resolve MIME type from file extension for the Blob — required so Spring Boot
+  /// can parse the multipart part's Content-Type header.
+  String _mimeType(String filename) {
+    final ext = filename.split('.').last.toLowerCase();
+    const map = {
+      'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
+      'png': 'image/png', 'gif': 'image/gif',
+      'webp': 'image/webp', 'bmp': 'image/bmp',
+      'heic': 'image/heic', 'heif': 'image/heif',
+      'mp4': 'video/mp4', 'mov': 'video/quicktime',
+      'avi': 'video/x-msvideo', 'mkv': 'video/x-matroska',
+    };
+    return map[ext] ?? 'application/octet-stream';
+  }
+
   Future<void> _uploadPhotos() async {
     FilePickerResult? result = await FilePicker.pickFiles(
       allowMultiple: true,
@@ -88,12 +103,14 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
       });
 
       try {
-        // On Flutter Web, http.MultipartRequest doesn't encode multipart correctly.
-        // Use dart:html FormData + XMLHttpRequest instead — browser handles boundary natively.
+        // Flutter Web: use dart:html FormData + XHR so the browser manages the
+        // multipart boundary. Crucially, we must pass the MIME type to Blob so
+        // that Spring Boot's @RequestPart sees a Content-Type per part.
         final formData = html.FormData();
         for (var file in result.files) {
           if (file.bytes != null) {
-            final blob = html.Blob([file.bytes!]);
+            final mime = _mimeType(file.name);
+            final blob = html.Blob([file.bytes!], mime);
             formData.appendBlob('files', blob, file.name);
           }
         }
@@ -104,7 +121,7 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
         xhr.onLoad.listen((_) => completer.complete(xhr.status ?? 0));
         xhr.onError.listen((_) => completer.completeError('Network error'));
         xhr.send(formData);
-        
+
         final status = await completer.future;
         if (mounted) {
           if (status == 200) {
