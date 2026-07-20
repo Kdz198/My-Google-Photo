@@ -13,7 +13,7 @@ class PhotoGalleryScreen extends StatefulWidget {
 }
 
 class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
-  final PhotoControllerApi _api = PhotoControllerApi(ApiClient(basePath: 'http://localhost:8080'));
+  final PhotoControllerApi _api = PhotoControllerApi(ApiClient(basePath: 'https://api-photo.kdz.asia'));
   final ScrollController _scrollController = ScrollController();
   
   List<Media> _photos = [];
@@ -22,7 +22,7 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
   int _currentPage = 0;
   bool _isUploading = false;
 
-  String getPreviewUrl(String shareToken) => 'http://localhost:8080/api/photos/preview/$shareToken';
+  String getPreviewUrl(String shareToken) => 'https://api-photo.kdz.asia/api/photos/preview/$shareToken';
 
   @override
   void initState() {
