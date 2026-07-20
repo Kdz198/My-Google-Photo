@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:http/http.dart' as http;
 import 'package:openapi/api.dart';
 import 'dart:async';
-import 'dart:html' as html;
+import 'package:web/web.dart' as web;
+import 'dart:js_interop';
 import '../widgets/photo_card.dart';
 import '../widgets/photo_detail_dialog.dart';
 
@@ -76,8 +76,8 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
     }
   }
 
-  /// Resolve MIME type from file extension for the Blob — required so Spring Boot
-  /// can parse the multipart part's Content-Type header.
+  /// Resolve MIME type from file extension — required so Spring Boot's @RequestPart
+  /// sees a Content-Type per part and doesn't reject the upload.
   String _mimeType(String filename) {
     final ext = filename.split('.').last.toLowerCase();
     const map = {
@@ -103,23 +103,28 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
       });
 
       try {
-        // Flutter Web: use dart:html FormData + XHR so the browser manages the
-        // multipart boundary. Crucially, we must pass the MIME type to Blob so
-        // that Spring Boot's @RequestPart sees a Content-Type per part.
-        final formData = html.FormData();
+        // Use package:web (modern replacement for dart:html) with XMLHttpRequest + FormData.
+        // This is the only reliable multipart upload approach on Flutter Web with Dart 3.7+.
+        final formData = web.FormData();
         for (var file in result.files) {
           if (file.bytes != null) {
             final mime = _mimeType(file.name);
-            final blob = html.Blob([file.bytes!], mime);
-            formData.appendBlob('files', blob, file.name);
+            final blobParts = <JSAny>[file.bytes!.toJS].toJS;
+            final blobOptions = web.BlobPropertyBag(type: mime);
+            final blob = web.Blob(blobParts, blobOptions);
+            formData.append('files', blob, file.name);
           }
         }
 
         final completer = Completer<int>();
-        final xhr = html.HttpRequest();
+        final xhr = web.XMLHttpRequest();
         xhr.open('POST', 'https://api-photo.kdz.asia/api/photos/upload');
-        xhr.onLoad.listen((_) => completer.complete(xhr.status ?? 0));
-        xhr.onError.listen((_) => completer.completeError('Network error'));
+        xhr.addEventListener('load', (web.Event _) {
+          completer.complete(xhr.status);
+        }.toJS);
+        xhr.addEventListener('error', (web.Event _) {
+          completer.completeError('Network error');
+        }.toJS);
         xhr.send(formData);
 
         final status = await completer.future;
@@ -142,7 +147,6 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
       }
     }
   }
-
 
   Future<void> _deletePhoto(Media media) async {
     bool? confirm = await showDialog<bool>(
