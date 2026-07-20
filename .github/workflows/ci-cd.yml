@@ -52,6 +52,7 @@ jobs:
       # Chạy full test với PostgreSQL ảo
       # Spotless check cũng được verify ở đây
       - name: Run Tests
+        working-directory: ./backend
         run: |
           chmod +x mvnw
           ./mvnw clean verify
@@ -74,7 +75,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ./backend
           push: true
           tags: |
             ${{ env.IMAGE_NAME }}:latest

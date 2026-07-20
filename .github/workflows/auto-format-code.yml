@@ -28,6 +28,7 @@ jobs:
           cache: maven
 
       - name: Apply Spotless formatting
+        working-directory: ./backend
         run: |
           chmod +x mvnw
           ./mvnw -q -DskipTests spotless:apply
