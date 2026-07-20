@@ -82,8 +82,8 @@ class ApiClient {
         final request = AbortableMultipartRequest(method, uri, abortTrigger: abortTrigger);
         request.fields.addAll(body.fields);
         request.files.addAll(body.files);
-        request.headers.addAll(body.headers);
         request.headers.addAll(headerParams);
+        request.headers.addAll(body.headers);
         final response = await _client.send(request);
         return Response.fromStream(response);
       }
