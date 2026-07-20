@@ -4,6 +4,7 @@ import 'package:openapi/api.dart';
 import 'dart:async';
 import 'package:web/web.dart' as web;
 import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
 import '../widgets/photo_card.dart';
 import '../widgets/photo_detail_dialog.dart';
 
@@ -109,10 +110,18 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
         for (var file in result.files) {
           if (file.bytes != null) {
             final mime = _mimeType(file.name);
-            final blobParts = <JSAny>[file.bytes!.toJS].toJS;
+            final blobParts = <JSAny>[file.bytes!.buffer.toJS].toJS;
             final blobOptions = web.BlobPropertyBag(type: mime);
             final blob = web.Blob(blobParts, blobOptions);
-            formData.append('files', blob, file.name);
+            // Use callMethod to explicitly call the blob overload of FormData.append:
+            // formData.append(name, blob, filename) — the 3-arg blob variant.
+            // Calling formData.append() directly from Dart picks the string overload.
+            (formData as JSObject).callMethod(
+              'append'.toJS,
+              'files'.toJS,
+              blob,
+              file.name.toJS,
+            );
           }
         }
 
