@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
-import '../models/media.dart';
-import '../services/api_service.dart';
+import 'package:openapi/api.dart';
 
 class PhotoCard extends StatefulWidget {
   final Media media;
+  final String previewUrl;
   final VoidCallback onDelete;
   final VoidCallback onViewDetails;
 
   const PhotoCard({
     Key? key,
     required this.media,
+    required this.previewUrl,
     required this.onDelete,
     required this.onViewDetails,
   }) : super(key: key);
@@ -49,7 +50,7 @@ class _PhotoCardState extends State<PhotoCard> {
             fit: StackFit.expand,
             children: [
               Image.network(
-                ApiService.getPreviewUrl(widget.media.shareToken),
+                widget.previewUrl,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
                   return const Center(child: Icon(Icons.broken_image, color: Colors.grey));

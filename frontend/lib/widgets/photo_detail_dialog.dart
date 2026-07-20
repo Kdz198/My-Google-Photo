@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../models/media.dart';
-import '../services/api_service.dart';
+import 'package:openapi/api.dart';
 
 class PhotoDetailDialog extends StatelessWidget {
   final Media media;
-  final ApiService apiService;
+  final PhotoControllerApi api;
+  final String previewUrl;
 
-  const PhotoDetailDialog({Key? key, required this.media, required this.apiService}) : super(key: key);
+  const PhotoDetailDialog({Key? key, required this.media, required this.api, required this.previewUrl}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -25,15 +25,15 @@ class PhotoDetailDialog extends StatelessWidget {
               child: Container(
                 color: Colors.black87,
                 child: Image.network(
-                  ApiService.getPreviewUrl(media.shareToken),
+                  previewUrl,
                   fit: BoxFit.contain,
                 ),
               ),
             ),
             Expanded(
               flex: 1,
-              child: FutureBuilder<Media>(
-                future: apiService.getDetail(media.id),
+              child: FutureBuilder<Media?>(
+                future: api.getDetail(media.id!),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
@@ -55,9 +55,9 @@ class PhotoDetailDialog extends StatelessWidget {
 
   Widget _buildDetails(BuildContext context, Media detailedMedia) {
     String formattedTime = detailedMedia.uploadTime != null
-        ? DateFormat('yyyy-MM-dd HH:mm').format(DateTime.parse(detailedMedia.uploadTime!))
+        ? DateFormat('yyyy-MM-dd HH:mm').format(detailedMedia.uploadTime!)
         : 'Unknown';
-    String sizeMB = (detailedMedia.sizeBytes / (1024 * 1024)).toStringAsFixed(2);
+    String sizeMB = detailedMedia.sizeBytes != null ? (detailedMedia.sizeBytes! / (1024 * 1024)).toStringAsFixed(2) : '0.00';
 
     return Padding(
       padding: const EdgeInsets.all(24.0),
@@ -78,7 +78,7 @@ class PhotoDetailDialog extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 24),
-          _buildInfoRow('Filename', detailedMedia.originalFilename),
+          _buildInfoRow('Filename', detailedMedia.originalFilename ?? 'Unknown'),
           _buildInfoRow('Size', '$sizeMB MB'),
           _buildInfoRow('Uploaded', formattedTime),
           if (detailedMedia.metadata != null) ...[
@@ -89,10 +89,8 @@ class PhotoDetailDialog extends StatelessWidget {
               _buildInfoRow('Resolution', '${detailedMedia.metadata!.width} x ${detailedMedia.metadata!.height}'),
             if (detailedMedia.metadata!.mimeType != null)
               _buildInfoRow('Type', detailedMedia.metadata!.mimeType!),
-            if (detailedMedia.metadata!.camera != null)
-              _buildInfoRow('Camera', detailedMedia.metadata!.camera!),
             if (detailedMedia.metadata!.device != null)
-              _buildInfoRow('Device', detailedMedia.metadata!.device!),
+              _buildInfoRow('Device', '${detailedMedia.metadata!.device?.make ?? ""} ${detailedMedia.metadata!.device?.model ?? ""}'),
           ],
         ],
       ),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import '../models/media.dart';
-import '../services/api_service.dart';
+import 'package:http/http.dart';
+import 'package:openapi/api.dart';
 import '../widgets/photo_card.dart';
 import '../widgets/photo_detail_dialog.dart';
 
@@ -13,7 +13,7 @@ class PhotoGalleryScreen extends StatefulWidget {
 }
 
 class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
-  final ApiService _apiService = ApiService();
+  final PhotoControllerApi _api = PhotoControllerApi(ApiClient(basePath: 'http://localhost:8080'));
   final ScrollController _scrollController = ScrollController();
   
   List<Media> _photos = [];
@@ -21,6 +21,8 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
   bool _hasMore = true;
   int _currentPage = 0;
   bool _isUploading = false;
+
+  String getPreviewUrl(String shareToken) => 'http://localhost:8080/api/photos/preview/$shareToken';
 
   @override
   void initState() {
@@ -55,10 +57,12 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
     });
 
     try {
-      final page = await _apiService.fetchPhotos(_currentPage);
+      final page = await _api.listFiles(page: _currentPage, size: 20);
       setState(() {
-        _photos.addAll(page.content);
-        _hasMore = !page.last;
+        if (page?.content != null) {
+          _photos.addAll(page!.content!);
+        }
+        _hasMore = !(page?.last ?? true);
         _currentPage++;
       });
     } catch (e) {
@@ -82,7 +86,17 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
       });
 
       try {
-        await _apiService.uploadFiles(result.files);
+        List<MultipartFile> multipartFiles = [];
+        for (var file in result.files) {
+          if (file.bytes != null) {
+            multipartFiles.add(MultipartFile.fromBytes(
+              'files',
+              file.bytes!,
+              filename: file.name,
+            ));
+          }
+        }
+        await _api.uploadMultiple(multipartFiles);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Upload successful!')));
         _loadPhotos(refresh: true);
       } catch (e) {
@@ -114,7 +128,7 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
 
     if (confirm == true) {
       try {
-        await _apiService.deletePhoto(media.id);
+        await _api.deleteFile(media.id!);
         setState(() {
           _photos.removeWhere((p) => p.id == media.id);
         });
@@ -128,7 +142,11 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
   void _showPhotoDetails(Media media) {
     showDialog(
       context: context,
-      builder: (context) => PhotoDetailDialog(media: media, apiService: _apiService),
+      builder: (context) => PhotoDetailDialog(
+        media: media, 
+        api: _api,
+        previewUrl: getPreviewUrl(media.shareToken!),
+      ),
     );
   }
 
@@ -188,6 +206,7 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
                     final media = _photos[index];
                     return PhotoCard(
                       media: media,
+                      previewUrl: getPreviewUrl(media.shareToken!),
                       onDelete: () => _deletePhoto(media),
                       onViewDetails: () => _showPhotoDetails(media),
                     );
