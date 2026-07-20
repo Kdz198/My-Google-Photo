@@ -1,19 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:openapi/api.dart';
-import 'dart:async';
-import 'package:web/web.dart' as web;
-import 'dart:js_interop';
+import 'package:http/http.dart' as http;
+import 'dart:typed_data';
 import '../widgets/photo_card.dart';
 import '../widgets/photo_detail_dialog.dart';
 
-/// Extension type that exposes the blob overload of FormData.append.
-/// package:web only exposes the string overload; we need the blob overload
-/// so each multipart part gets its own Content-Type header.
-extension type _FormDataBlob(web.FormData _) {
-  @JS('append')
-  external void appendBlob(String name, web.Blob blob, String filename);
-}
 
 class PhotoGalleryScreen extends StatefulWidget {
   const PhotoGalleryScreen({Key? key}) : super(key: key);
@@ -111,44 +103,50 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
       });
 
       try {
-        // Use package:web (modern replacement for dart:html) with XMLHttpRequest + FormData.
-        // This is the only reliable multipart upload approach on Flutter Web with Dart 3.7+.
-        final formData = web.FormData();
+        // Build multipart/form-data body manually — identical to how curl constructs it.
+        // This bypasses ALL browser FormData / XHR issues in Flutter Web.
+        final boundary = 'dart-boundary-${DateTime.now().millisecondsSinceEpoch}';
+        final bodyBytes = <int>[];
+
         for (var file in result.files) {
           if (file.bytes != null) {
             final mime = _mimeType(file.name);
-            final blobParts = <JSAny>[file.bytes!.buffer.toJS].toJS;
-            final blobOptions = web.BlobPropertyBag(type: mime);
-            final blob = web.Blob(blobParts, blobOptions);
-            // Cast to our extension type to call the blob overload of append:
-            // formData.append(name, blob, filename) — ensures Content-Type per part.
-            _FormDataBlob(formData).appendBlob('files', blob, file.name);
+            // Part header
+            bodyBytes.addAll('--$boundary\r\n'.codeUnits);
+            bodyBytes.addAll(
+              'Content-Disposition: form-data; name="files"; filename="${file.name}"\r\n'
+              .codeUnits,
+            );
+            bodyBytes.addAll('Content-Type: $mime\r\n'.codeUnits);
+            bodyBytes.addAll('\r\n'.codeUnits);
+            // File bytes
+            bodyBytes.addAll(file.bytes!);
+            bodyBytes.addAll('\r\n'.codeUnits);
           }
         }
+        // Closing boundary
+        bodyBytes.addAll('--$boundary--\r\n'.codeUnits);
 
-        final completer = Completer<int>();
-        final xhr = web.XMLHttpRequest();
-        xhr.open('POST', 'https://api-photo.kdz.asia/api/photos/upload');
-        xhr.addEventListener('load', (web.Event _) {
-          completer.complete(xhr.status);
-        }.toJS);
-        xhr.addEventListener('error', (web.Event _) {
-          completer.completeError('Network error');
-        }.toJS);
-        xhr.send(formData);
+        final response = await http.post(
+          Uri.parse('https://api-photo.kdz.asia/api/photos/upload'),
+          headers: {'Content-Type': 'multipart/form-data; boundary=$boundary'},
+          body: Uint8List.fromList(bodyBytes),
+        );
 
-        final status = await completer.future;
         if (mounted) {
-          if (status == 200) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Upload successful!')));
+          if (response.statusCode == 200) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Upload successful!')));
             _loadPhotos(refresh: true);
           } else {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Upload failed: $status ${xhr.responseText}')));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Upload failed: ${response.statusCode} ${response.body}')));
           }
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Upload failed: $e')));
         }
       } finally {
         setState(() {
