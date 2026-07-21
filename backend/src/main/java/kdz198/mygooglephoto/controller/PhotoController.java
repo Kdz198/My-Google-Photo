@@ -38,8 +38,9 @@ public class PhotoController {
               description = "Danh sách file cần upload",
               required = true,
               array = @ArraySchema(schema = @Schema(type = "string", format = "binary")))
-          @RequestPart("files")
+          @RequestParam(value = "files", required = false)
           MultipartFile[] files) {
+    if (files == null || files.length == 0) return ResponseEntity.ok(List.of());
     return ResponseEntity.ok(photoStorageService.storeFiles(files));
   }
 
