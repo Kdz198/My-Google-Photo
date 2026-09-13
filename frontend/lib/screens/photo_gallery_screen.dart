@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart';
 import 'package:openapi/api.dart';
+import '../config/app_config.dart';
 import '../widgets/photo_card.dart';
 import '../widgets/photo_detail_dialog.dart';
 
@@ -13,16 +14,16 @@ class PhotoGalleryScreen extends StatefulWidget {
 }
 
 class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
-  final PhotoControllerApi _api = PhotoControllerApi(ApiClient(basePath: 'https://api-photo.kdz.asia'));
+  final PhotoControllerApi _api = PhotoControllerApi(ApiClient(basePath: AppConfig.baseUrl));
   final ScrollController _scrollController = ScrollController();
-  
+
   List<Media> _photos = [];
   bool _isLoading = false;
   bool _hasMore = true;
   int _currentPage = 0;
   bool _isUploading = false;
 
-  String getPreviewUrl(String shareToken) => 'https://api-photo.kdz.asia/api/photos/preview/$shareToken';
+  String getPreviewUrl(String shareToken) => '${AppConfig.baseUrl}/api/photos/preview/$shareToken';
 
   @override
   void initState() {
@@ -119,7 +120,7 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.pop(context, true), 
+            onPressed: () => Navigator.pop(context, true),
             child: const Text('Delete', style: TextStyle(color: Colors.white))
           ),
         ],
@@ -143,7 +144,7 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
     showDialog(
       context: context,
       builder: (context) => PhotoDetailDialog(
-        media: media, 
+        media: media,
         api: _api,
         previewUrl: getPreviewUrl(media.shareToken!),
       ),
@@ -157,7 +158,7 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
         title: const Text('My Google Photo', style: TextStyle(fontWeight: FontWeight.bold)),
         elevation: 0,
         actions: [
-          if (_isUploading) 
+          if (_isUploading)
             const Center(child: Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)))),
           Padding(
             padding: const EdgeInsets.all(8.0),
