@@ -36,6 +36,7 @@ public class Media {
 
   private Long sizeBytes;
 
+  @CreationTimestamp
   private LocalDateTime creationTime;
 
   @CreationTimestamp private LocalDateTime uploadTime;
