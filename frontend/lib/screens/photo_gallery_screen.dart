@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart';
 import 'package:openapi/api.dart';
 import '../config/app_config.dart';
+import '../main.dart';
 import '../widgets/photo_card.dart';
 import '../widgets/photo_detail_dialog.dart';
 
@@ -79,6 +80,7 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
     FilePickerResult? result = await FilePicker.pickFiles(
       allowMultiple: true,
       type: FileType.media,
+      withData: true,
     );
 
     if (result != null && result.files.isNotEmpty) {
@@ -101,6 +103,7 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Upload successful!')));
         _loadPhotos(refresh: true);
       } catch (e) {
+        debugPrint('Upload failed: $e');
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
       } finally {
         setState(() {
@@ -160,6 +163,19 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
         actions: [
           if (_isUploading)
             const Center(child: Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)))),
+          ValueListenableBuilder<ThemeMode>(
+            valueListenable: themeModeNotifier,
+            builder: (context, mode, _) {
+              final isDark = Theme.of(context).brightness == Brightness.dark;
+              return IconButton(
+                tooltip: isDark ? 'Switch to light mode' : 'Switch to dark mode',
+                icon: Icon(isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined),
+                onPressed: () {
+                  themeModeNotifier.value = isDark ? ThemeMode.light : ThemeMode.dark;
+                },
+              );
+            },
+          ),
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: ElevatedButton.icon(
@@ -167,8 +183,8 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
               icon: const Icon(Icons.upload),
               label: const Text('Upload'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
-                foregroundColor: Colors.white,
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
             ),
@@ -183,9 +199,19 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.photo_library_outlined, size: 64, color: Colors.grey[400]),
+                    Icon(
+                      Icons.photo_library_outlined,
+                      size: 64,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                    ),
                     const SizedBox(height: 16),
-                    Text('No photos found', style: TextStyle(color: Colors.grey[600], fontSize: 18)),
+                    Text(
+                      'No photos found',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        fontSize: 18,
+                      ),
+                    ),
                   ],
                 ),
               )

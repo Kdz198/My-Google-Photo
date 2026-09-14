@@ -84,6 +84,11 @@ class ApiClient {
         request.files.addAll(body.files);
         request.headers.addAll(body.headers);
         request.headers.addAll(headerParams);
+        // MultipartRequest sets its own 'content-type' (with boundary) during finalize().
+        // Remove any boundary-less value we (or headerParams) may have set, so it can't
+        // race with / shadow the boundary-bearing header the library generates.
+        request.headers.remove('Content-Type');
+        request.headers.remove('content-type');
         final response = await _client.send(request);
         return Response.fromStream(response);
       }

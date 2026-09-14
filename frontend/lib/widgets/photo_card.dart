@@ -33,7 +33,7 @@ class _PhotoCardState extends State<PhotoCard> {
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeInOut,
           decoration: BoxDecoration(
-            color: Colors.grey[200],
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(12),
             boxShadow: _isHovered
                 ? [
@@ -53,7 +53,9 @@ class _PhotoCardState extends State<PhotoCard> {
                 widget.previewUrl,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
-                  return const Center(child: Icon(Icons.broken_image, color: Colors.grey));
+                  return Center(
+                    child: Icon(Icons.broken_image, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  );
                 },
                 loadingBuilder: (context, child, loadingProgress) {
                   if (loadingProgress == null) return child;

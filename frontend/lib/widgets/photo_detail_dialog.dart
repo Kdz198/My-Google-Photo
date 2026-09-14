@@ -32,19 +32,21 @@ class PhotoDetailDialog extends StatelessWidget {
             ),
             Expanded(
               flex: 1,
-              child: FutureBuilder<Media?>(
-                future: api.getDetail(media.id!),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  } else if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
-                  } else if (snapshot.hasData) {
-                    return _buildDetails(context, snapshot.data!);
-                  } else {
-                    return const SizedBox();
-                  }
-                },
+              child: SelectionArea(
+                child: FutureBuilder<Media?>(
+                  future: api.getDetail(media.id!),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    } else if (snapshot.hasError) {
+                      return Center(child: Text('Error: ${snapshot.error}'));
+                    } else if (snapshot.hasData) {
+                      return _buildDetails(context, snapshot.data!);
+                    } else {
+                      return const SizedBox();
+                    }
+                  },
+                ),
               ),
             ),
           ],
@@ -78,32 +80,35 @@ class PhotoDetailDialog extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 24),
-          _buildInfoRow('Filename', detailedMedia.originalFilename ?? 'Unknown'),
-          _buildInfoRow('Size', '$sizeMB MB'),
-          _buildInfoRow('Uploaded', formattedTime),
+          _buildInfoRow(context, 'Filename', detailedMedia.originalFilename ?? 'Unknown'),
+          _buildInfoRow(context, 'Size', '$sizeMB MB'),
+          _buildInfoRow(context, 'Uploaded', formattedTime),
           if (detailedMedia.metadata != null) ...[
             const Divider(height: 32),
             const Text('Metadata', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             if (detailedMedia.metadata!.width != null)
-              _buildInfoRow('Resolution', '${detailedMedia.metadata!.width} x ${detailedMedia.metadata!.height}'),
+              _buildInfoRow(context, 'Resolution', '${detailedMedia.metadata!.width} x ${detailedMedia.metadata!.height}'),
             if (detailedMedia.metadata!.mimeType != null)
-              _buildInfoRow('Type', detailedMedia.metadata!.mimeType!),
+              _buildInfoRow(context, 'Type', detailedMedia.metadata!.mimeType!),
             if (detailedMedia.metadata!.device != null)
-              _buildInfoRow('Device', '${detailedMedia.metadata!.device?.make ?? ""} ${detailedMedia.metadata!.device?.model ?? ""}'),
+              _buildInfoRow(context, 'Device', '${detailedMedia.metadata!.device?.make ?? ""} ${detailedMedia.metadata!.device?.model ?? ""}'),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildInfoRow(BuildContext context, String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+          Text(
+            label,
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
+          ),
           const SizedBox(height: 4),
           Text(value, style: const TextStyle(fontSize: 14)),
         ],

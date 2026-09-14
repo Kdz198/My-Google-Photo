@@ -31,6 +31,20 @@
 
 **Color Notes:** Gallery black + white space [Accent adjusted from #F8FAFC for WCAG 3:1]
 
+### Dark Mode (implemented in `frontend`, `ThemeMode.system` by default, toggle in app bar)
+
+Same Zinc scale, inverted — kept visually consistent with the light theme rather than switching style families.
+
+| Role | Hex | Notes |
+|------|-----|-------|
+| Background | `#09090B` | Zinc 950 (was Foreground in light mode) |
+| Surface / Card | `#18181B` | Zinc 900 (was Primary in light mode) |
+| Primary / Accent | `#F4F4F5` | Zinc 100 |
+| Foreground (text) | `#FAFAFA` | Zinc 50 |
+| Secondary | `#27272A` | Zinc 800 (unchanged from light) |
+
+**Implementation:** `frontend/lib/main.dart` — `ValueNotifier<ThemeMode> themeModeNotifier`, `MaterialApp.themeMode` + `darkTheme`. Toggle button lives in `PhotoGalleryScreen`'s `AppBar`. Widget-level colors (`photo_card.dart`, `photo_detail_dialog.dart`) use `Theme.of(context).colorScheme.*` — never hardcode `Colors.grey`/hex values so both themes stay correct automatically.
+
 ### Typography
 
 - **Heading Font:** Plus Jakarta Sans
